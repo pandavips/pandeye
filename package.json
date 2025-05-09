@@ -1,0 +1,30 @@
+{
+  "name": "pandeye",
+  "version": "0.1.0",
+  "description": "A lightweight and powerful web monitoring SDK",
+  "main": "dist/pandeye.js",
+  "module": "dist/pandeye.esm.js",
+  "types": "dist/types/index.d.ts",
+  "scripts": {
+    "dev": "rollup -c rollup.config.js -w",
+    "build": "rollup -c rollup.config.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "web",
+    "monitor",
+    "performance",
+    "error",
+    "tracking"
+  ],
+  "author": "pandavips",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pandavips/pandeye.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pandavips/pandeye/issues"
+  },
+  "homepage": "https://github.com/pandavips/pandeye#readme"
+}
