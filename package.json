@@ -10,24 +10,34 @@
     "build": "rollup -c rollup.config.js",
     "test": "jest",
     "lint": "eslint src --ext .ts",
+    "fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "lint-staged": "lint-staged"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@rollup/plugin-replace": "^6.0.2",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@testing-library/jest-dom": "^6.6.3",
     "@types/jest": "^29.5.5",
+    "@types/testing-library__jest-dom": "^6.0.0",
     "@typescript-eslint/eslint-plugin": "^6.7.4",
     "@typescript-eslint/parser": "^6.7.4",
     "eslint": "^8.51.0",
     "husky": "^8.0.3",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "jest-extended": "^4.0.2",
     "lint-staged": "^14.0.1",
     "prettier": "^3.0.3",
     "rollup": "^4.0.2",
     "rollup-plugin-dts": "^6.1.0",
     "rollup-plugin-typescript2": "^0.36.0",
+    "rollup-plugin-visualizer": "^5.14.0",
     "ts-jest": "^29.1.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.3.3"
   },
   "keywords": [
     "web",
@@ -46,5 +56,14 @@
     "url": "https://github.com/pandavips/pandeye/issues"
   },
   "homepage": "https://github.com/pandavips/pandeye#readme",
-  "type": "module"
+  "type": "module",
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
 }
