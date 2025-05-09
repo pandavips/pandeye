@@ -3,6 +3,8 @@
  */
 export interface PandeyeOptions {
   appId: string;
+  // 运行环境
+  env: string
   // 上报接口地址
   reportUrl?: string;
   // 上报时机
@@ -56,6 +58,22 @@ export interface ResourceMetric {
  * 错误信息数据结构
  * 记录各类错误的详细信息
  */
+/**
+ * 主动上报的数据结构
+ */
+export interface ManualReportData {
+  // 事件名称
+  event: string;
+  // 事件类别
+  category?: string;
+  // 事件标签
+  label?: string;
+  // 事件值
+  value?: number;
+  // 额外数据
+  extra?: Record<string, any>;
+}
+
 export interface ErrorInfo {
   type: 'js' | 'promise' | 'resource' | 'api';
   message: string;

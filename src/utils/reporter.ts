@@ -1,17 +1,20 @@
 /**
  * 上报数据的接口定义
  */
-export interface ReportData {
-  appId: string;
-  timestamp: number;
+export interface BaseReportData {
   type: string;
   data: any;
+  timestamp: number;
+}
+export interface ReportData extends BaseReportData {
+  appId: string;
+  env: string;
 }
 
 /**
  * 数据上报类
  * 负责将收集到的监控数据发送到服务器
- * 
+ *
  * 特点：
  * 1. 支持批量上报
  * 2. 支持失败重试
@@ -43,10 +46,9 @@ export class Reporter {
     window.addEventListener('beforeunload', () => {
       // 页面关闭前发送所有待发送的数据
       if (this.queue.length > 0) {
-        const blob = new Blob(
-          [JSON.stringify({ events: this.queue })],
-          { type: 'application/json' }
-        );
+        const blob = new Blob([JSON.stringify({ events: this.queue })], {
+          type: 'application/json',
+        });
         navigator.sendBeacon(this.url, blob);
         this.queue = [];
       }
@@ -124,4 +126,18 @@ export class Reporter {
       throw error;
     }
   }
+}
+
+/**
+ * 创建上报数据对象
+ * @param type 数据类型
+ * @param data 上报的数据
+ * @private
+ */
+export function createBaseReportData(type: string, data: any): any {
+  return {
+    type,
+    data,
+    timestamp: Date.now(),
+  };
 }

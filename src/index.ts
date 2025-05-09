@@ -1,73 +1,77 @@
-import { PandeyeOptions } from './types';
+import { BehaviorMonitor } from './monitors/behavior';
 import { PerformanceMonitor } from './monitors/performance';
 import { ErrorMonitor } from './monitors/error';
-import { BehaviorMonitor } from './monitors/behavior';
 import { Reporter } from './utils/reporter';
+import { PandeyeOptions, ManualReportData } from './types';
 
 /**
- * Pandeye 前端监控类
- * 用于收集和上报前端性能、错误和用户行为数据
- * 
- * 功能特点：
- * 1. 支持性能监控（页面加载时间、资源加载等）
- * 2. 支持错误监控（JS错误、Promise错误、资源加载错误等）
- * 3. 支持用户行为监控（PV、点击、路由变化等）
- * 4. 支持自定义事件追踪
- * 5. 支持立即上报和定时上报两种模式
+ * Pandeye监控系统主类
+ * 整合行为、性能、错误监控等功能
  */
-class Pandeye {
+export class Pandeye {
+  private static instance: Pandeye;
   private options: PandeyeOptions;
   private reporter: Reporter;
-  private performanceMonitor: PerformanceMonitor;
-  private errorMonitor: ErrorMonitor;
-  private behaviorMonitor: BehaviorMonitor;
-  private reportTimer: number | null = null;
+  private behaviorMonitor?: BehaviorMonitor;
+  private performanceMonitor?: PerformanceMonitor;
+  private errorMonitor?: ErrorMonitor;
+  private reportTimer?: number;
 
   /**
-   * 创建一个新的 Pandeye 实例
-   * @param options 配置选项
-   * @param options.appId - 应用ID（必需）
-   * @param options.reportUrl - 数据上报地址
-   * @param options.reportTime - 上报时机 ('immediately' | 'beforeunload' | number)
-   * @param options.autoStart - 是否自动开始监控
-   * @param options.enablePerformance - 是否启用性能监控
-   * @param options.enableError - 是否启用错误监控
-   * @param options.enableBehavior - 是否启用行为监控
-   * @param options.enableConsole - 是否启用控制台监控
-   * @param options.customReport - 自定义上报数据
-   * @throws {Error} 当未提供 appId 时抛出错误
+   * 创建Pandeye实例
+   * 使用单例模式确保只有一个监控实例
    */
-  constructor(options: PandeyeOptions) {
+  private constructor(options: PandeyeOptions) {
+    // 必填选项检查
     if (!options.appId) {
       throw new Error('appId is required');
     }
 
-    this.options = {
-      reportUrl: 'https://report.pandeye.com/collect',
-      reportTime: 'immediately',
+    // 设置默认选项
+    const defaultOptions = {
+      env: 'prod',
+      reportUrl: 'https://monitor-api.example.com/report',
+      reportTime: 'beforeunload' as const,
       autoStart: true,
       enablePerformance: true,
       enableError: true,
       enableBehavior: true,
       enableConsole: false,
+    };
+
+    // 合并用户选项
+    this.options = {
+      ...defaultOptions,
       ...options
     };
 
-    this.reporter = new Reporter(this.options.reportUrl || 'https://report.pandeye.com/collect');
-    this.init();
-
+    this.reporter = new Reporter(this.options.reportUrl!);
+    
     if (this.options.autoStart) {
       this.start();
     }
   }
 
   /**
-   * 初始化监控模块
-   * 根据配置项初始化各个监控模块（性能、错误、行为），并设置定时上报
-   * @private
+   * 获取Pandeye实例
+   * @param options 配置选项
    */
-  private init(): void {
+  public static getInstance(options: PandeyeOptions): Pandeye {
+    if (!Pandeye.instance) {
+      Pandeye.instance = new Pandeye(options);
+    }
+    return Pandeye.instance;
+  }
+
+  /**
+   * 启动监控系统
+   */
+  public start(): void {
     // 初始化各个监控模块
+    if (this.options.enableBehavior) {
+      this.behaviorMonitor = new BehaviorMonitor();
+    }
+
     if (this.options.enablePerformance) {
       this.performanceMonitor = new PerformanceMonitor();
     }
@@ -76,122 +80,161 @@ class Pandeye {
       this.errorMonitor = new ErrorMonitor();
     }
 
-    if (this.options.enableBehavior) {
-      this.behaviorMonitor = new BehaviorMonitor();
+    if (this.options.enableConsole) {
+      this.setupConsoleMonitor();
     }
 
-    // 设置定时上报
-    if (typeof this.options.reportTime === 'number') {
-      this.reportTimer = window.setInterval(
-        () => this.report(),
-        this.options.reportTime
-      );
-    }
+    // 设置数据上报
+    this.setupReporting();
   }
 
   /**
-   * 执行数据上报
-   * 收集各个监控模块的数据并进行上报，支持批量上报和立即上报
-   * @private
-   * @returns Promise<void>
+   * 设置控制台日志监控
    */
-  private async report(): Promise<void> {
-    const now = Date.now();
-    const commonData = {
-      appId: this.options.appId,
-      timestamp: now,
-      ...this.options.customReport
+  private setupConsoleMonitor(): void {
+    const originalConsole = {
+      log: console.log,
+      info: console.info,
+      warn: console.warn,
+      error: console.error
     };
 
-    // 上报性能数据
-    if (this.options.enablePerformance && this.performanceMonitor) {
+    // 代理console方法
+    type ConsoleMethod = keyof typeof originalConsole;
+    ['log', 'info', 'warn', 'error'].forEach(level => {
+      const method = level as ConsoleMethod;
+      console[method] = (...args: any[]) => {
+        // 调用原始方法
+        originalConsole[method].apply(console, args);
+
+        // 记录日志
+        this.reporter.report({
+          appId: this.options.appId,
+          env: this.options.env,
+          timestamp: Date.now(),
+          type: 'console',
+          data: {
+            level,
+            messages: args.map(arg => {
+              try {
+                return JSON.stringify(arg);
+              } catch {
+                return String(arg);
+              }
+            })
+          }
+        });
+      };
+    });
+  }
+
+  /**
+   * 设置数据上报机制
+   */
+  private setupReporting(): void {
+    const reportData = async () => {
+      const data = {
+        appId: this.options.appId,
+        timestamp: Date.now(),
+        customData: this.options.customReport || {},
+        behavior: this.behaviorMonitor?.getBehaviors() || [],
+        performance: this.performanceMonitor?.getMetrics() || null,
+        errors: this.errorMonitor?.getErrors() || []
+      };
+
       await this.reporter.report({
-        ...commonData,
-        type: 'performance',
-        data: this.performanceMonitor.getMetrics()
+        appId: this.options.appId,
+        env: this.options.env,
+        timestamp: Date.now(),
+        type: 'batch',
+        data
       });
-    }
 
-    // 上报错误数据
-    if (this.options.enableError && this.errorMonitor) {
-      const errors = this.errorMonitor.getErrors();
-      if (errors.length > 0) {
-        await this.reporter.report({
-          ...commonData,
-          type: 'error',
-          data: errors
-        });
-        this.errorMonitor.clearErrors();
-      }
-    }
+      // 清理已上报的数据
+      this.behaviorMonitor?.clearBehaviors();
+      this.errorMonitor?.clearErrors();
+    };
 
-    // 上报行为数据
-    if (this.options.enableBehavior && this.behaviorMonitor) {
-      const behaviors = this.behaviorMonitor.getBehaviors();
-      if (behaviors.length > 0) {
-        await this.reporter.report({
-          ...commonData,
-          type: 'behavior',
-          data: behaviors
-        });
-        this.behaviorMonitor.clearBehaviors();
-      }
-    }
-
-    // 如果设置为即时上报，立即发送数据
-    if (this.options.reportTime === 'immediately') {
-      await this.reporter.flush();
+    // 根据配置设置上报时机
+    if (typeof this.options.reportTime === 'number') {
+      // 定时上报
+      this.reportTimer = window.setInterval(reportData, this.options.reportTime);
+    } else if (this.options.reportTime === 'beforeunload') {
+      // 页面关闭前上报
+      window.addEventListener('beforeunload', () => {
+        reportData();
+      });
+    } else {
+      // 实时上报，不需要特殊处理，数据会立即通过reporter发送
     }
   }
 
   /**
-   * 启动监控
-   * 开始收集和上报数据
-   * @public
+   * 手动触发数据上报
    */
-  public start(): void {
-    console.log('Pandeye 监控已启动');
+  public async flush(): Promise<void> {
+    await this.reporter.flush();
   }
 
   /**
    * 停止监控
-   * 停止数据收集和定时上报
-   * @public
    */
   public stop(): void {
     if (this.reportTimer) {
-      window.clearInterval(this.reportTimer);
-      this.reportTimer = null;
+      clearInterval(this.reportTimer);
     }
-    console.log('Pandeye 监控已停止');
   }
 
   /**
-   * 强制执行一次数据上报
-   * 立即收集并上报所有监控数据
-   * @public
-   * @returns Promise<void>
-   */
-  public async forceReport(): Promise<void> {
-    await this.report();
-    await this.reporter.flush();
-  }
-
-  // 自定义事件追踪
-  /**
-   * 追踪自定义事件
-   * @public
-   * @param eventName - 事件名称
-   * @param data - 事件数据
+   * 手动记录自定义事件
+   * @param eventName 事件名称
+   * @param data 事件数据
    */
   public trackEvent(eventName: string, data: any): void {
     if (this.behaviorMonitor) {
       this.behaviorMonitor.trackCustomEvent(eventName, data);
-      if (this.options.reportTime === 'immediately') {
-        this.report();
-      }
     }
+  }
+
+  /**
+   * 主动上报数据
+   * @param data 要上报的数据
+   */
+  public report(data: ManualReportData): void {
+    this.reporter.report({
+      appId: this.options.appId,
+      env: this.options.env,
+      timestamp: Date.now(),
+      type: 'manual',
+      data
+    });
+  }
+
+  /**
+   * 主动批量上报数据
+   * @param dataList 要上报的数据列表
+   */
+  public batchReport(dataList: ManualReportData[]): void {
+    const timestamp = Date.now();
+    dataList.forEach(data => {
+      this.reporter.report({
+        appId: this.options.appId,
+        env: this.options.env,
+        timestamp,
+        type: 'manual',
+        data
+      });
+    });
+  }
+
+  public getData(): any {
+    return {
+      behavior: this.behaviorMonitor?.getBehaviors() || [],
+      performance: this.performanceMonitor?.getMetrics() || null,
+      errors: this.errorMonitor?.getErrors() || []
+    };
   }
 }
 
-export default Pandeye;
+// 导出类型定义
+export * from './types';
