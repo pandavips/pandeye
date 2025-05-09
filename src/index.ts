@@ -13,6 +13,10 @@ class Pandeye {
   private reportTimer: number | null = null;
 
   constructor(options: PandeyeOptions) {
+    if (!options.appId) {
+      throw new Error('appId is required');
+    }
+
     this.options = {
       reportUrl: 'https://report.pandeye.com/collect',
       reportTime: 'immediately',
@@ -24,7 +28,7 @@ class Pandeye {
       ...options
     };
 
-    this.reporter = new Reporter(this.options.reportUrl);
+    this.reporter = new Reporter(this.options.reportUrl || 'https://report.pandeye.com/collect');
     this.init();
 
     if (this.options.autoStart) {
@@ -64,7 +68,7 @@ class Pandeye {
     };
 
     // 上报性能数据
-    if (this.options.enablePerformance) {
+    if (this.options.enablePerformance && this.performanceMonitor) {
       await this.reporter.report({
         ...commonData,
         type: 'performance',
@@ -73,7 +77,7 @@ class Pandeye {
     }
 
     // 上报错误数据
-    if (this.options.enableError) {
+    if (this.options.enableError && this.errorMonitor) {
       const errors = this.errorMonitor.getErrors();
       if (errors.length > 0) {
         await this.reporter.report({
@@ -86,7 +90,7 @@ class Pandeye {
     }
 
     // 上报行为数据
-    if (this.options.enableBehavior) {
+    if (this.options.enableBehavior && this.behaviorMonitor) {
       const behaviors = this.behaviorMonitor.getBehaviors();
       if (behaviors.length > 0) {
         await this.reporter.report({

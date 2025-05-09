@@ -55,15 +55,25 @@ export class BehaviorMonitor {
       this.recordRouteChange();
     });
 
-    // 重写 history 方法
-    const methods = ['pushState', 'replaceState'];
-    methods.forEach(method => {
-      const original = window.history[method];
-      window.history[method] = function (...args) {
-        const result = original.apply(this, args);
-        window.dispatchEvent(new Event('popstate'));
-        return result;
-      };
+    // 重写 history 方法，使用代理模式
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+
+    window.history.pushState = function(...args) {
+      const result = originalPushState.apply(this, args);
+      window.dispatchEvent(new CustomEvent('pandeye_route_change'));
+      return result;
+    };
+
+    window.history.replaceState = function(...args) {
+      const result = originalReplaceState.apply(this, args);
+      window.dispatchEvent(new CustomEvent('pandeye_route_change'));
+      return result;
+    };
+
+    // 监听自定义路由事件
+    window.addEventListener('pandeye_route_change', () => {
+      this.recordRouteChange();
     });
   }
 
@@ -85,10 +95,18 @@ export class BehaviorMonitor {
     while (current && current !== document.body) {
       let selector = current.tagName.toLowerCase();
       if (current.id) {
-        selector += `#${current.id}`;
-      } else if (current.className) {
-        selector += `.${current.className.split(' ').join('.')}`;
+      selector += `#${current.id}`;
+    } else if (current.className && typeof current.className === 'string' && current.className.trim()) {
+      // 处理多个类名，过滤空类名
+      const classes = current.className
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .join('.');
+      if (classes) {
+        selector += `.${classes}`;
       }
+    }
       path.unshift(selector);
       current = current.parentElement;
     }
