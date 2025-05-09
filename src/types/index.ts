@@ -1,3 +1,6 @@
+/**
+ * Pandeye 监控配置选项
+ */
 export interface PandeyeOptions {
   appId: string;
   // 上报接口地址
@@ -20,6 +23,10 @@ export interface PandeyeOptions {
   };
 }
 
+/**
+ * 性能监控指标数据结构
+ * 包含页面加载、绘制时间和资源加载情况等性能指标
+ */
 export interface PerformanceMetrics {
   // 页面加载时间
   loadTime: number;
@@ -33,6 +40,10 @@ export interface PerformanceMetrics {
   resources: ResourceMetric[];
 }
 
+/**
+ * 资源加载性能指标
+ * 记录单个资源的加载性能数据
+ */
 export interface ResourceMetric {
   name: string;
   initiatorType: string;
@@ -41,6 +52,10 @@ export interface ResourceMetric {
   startTime: number;
 }
 
+/**
+ * 错误信息数据结构
+ * 记录各类错误的详细信息
+ */
 export interface ErrorInfo {
   type: 'js' | 'promise' | 'resource' | 'api';
   message: string;
@@ -51,6 +66,10 @@ export interface ErrorInfo {
   timestamp: number;
 }
 
+/**
+ * 用户行为信息数据结构
+ * 记录用户交互行为的详细信息
+ */
 export interface BehaviorInfo {
   type: 'pv' | 'click' | 'route' | 'custom';
   data: any;

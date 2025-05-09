@@ -1,3 +1,6 @@
+/**
+ * 上报数据的接口定义
+ */
 export interface ReportData {
   appId: string;
   timestamp: number;
@@ -5,6 +8,16 @@ export interface ReportData {
   data: any;
 }
 
+/**
+ * 数据上报类
+ * 负责将收集到的监控数据发送到服务器
+ * 
+ * 特点：
+ * 1. 支持批量上报
+ * 2. 支持失败重试
+ * 3. 支持页面关闭前保存数据
+ * 4. 队列管理防止数据丢失
+ */
 export class Reporter {
   private readonly url: string;
   private readonly maxRetries: number = 3;
@@ -12,11 +25,20 @@ export class Reporter {
   private readonly batchSize: number = 10;
   private sending: boolean = false;
 
+  /**
+   * 创建数据上报实例
+   * @param url 数据上报的目标地址
+   */
   constructor(url: string) {
     this.url = url;
     this.setupBeforeUnload();
   }
 
+  /**
+   * 设置页面关闭前的数据处理
+   * 使用 Navigator.sendBeacon API 确保数据在页面关闭前发送
+   * @private
+   */
   private setupBeforeUnload(): void {
     window.addEventListener('beforeunload', () => {
       // 页面关闭前发送所有待发送的数据
@@ -31,6 +53,12 @@ export class Reporter {
     });
   }
 
+  /**
+   * 将数据添加到上报队列
+   * 当队列达到批量上报的阈值时，自动触发上报
+   * @param data 需要上报的数据
+   * @public
+   */
   public async report(data: ReportData): Promise<void> {
     this.queue.push(data);
 
@@ -39,6 +67,11 @@ export class Reporter {
     }
   }
 
+  /**
+   * 强制上报队列中的所有数据
+   * 会尝试发送队列中所有待发送的数据
+   * @public
+   */
   public async flush(): Promise<void> {
     if (this.sending || this.queue.length === 0) return;
 
@@ -61,6 +94,14 @@ export class Reporter {
     }
   }
 
+  /**
+   * 发送数据到服务器
+   * 支持失败重试，重试间隔随重试次数增加
+   * @param data 要发送的数据
+   * @param retries 当前重试次数
+   * @private
+   * @throws 当重试次数达到上限时抛出错误
+   */
   private async sendWithRetry(data: { events: ReportData[] }, retries: number = 0): Promise<void> {
     try {
       const response = await fetch(this.url, {
