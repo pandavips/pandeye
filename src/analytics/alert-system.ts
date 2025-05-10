@@ -363,7 +363,7 @@ export class AlertManager {
 
       // 根据条件类型评估
       switch (condition.type) {
-        case ConditionType.THRESHOLD: 
+        case ConditionType.THRESHOLD:
           {
             const isTriggered = this.evaluateThresholdCondition(condition, metricData);
             if (!isTriggered) {
@@ -730,15 +730,16 @@ export class AlertManager {
     try {
       // 根据渠道类型处理通知
       switch (channel.type) {
-        case NotificationChannelType.CONSOLE:
+        case NotificationChannelType.CONSOLE: {
           // 控制台日志
           console.warn(
             `[Pandeye Alert] ${alert.name} (${alert.priority})`,
             alert.events[alert.events.length - 1]
           );
           return true;
+        }
 
-        case NotificationChannelType.WEBHOOK:
+        case NotificationChannelType.WEBHOOK: {
           // 发送Webhook
           if (!channel.target) return false;
 
@@ -762,11 +763,12 @@ export class AlertManager {
           });
 
           return response.ok;
+        }
 
         // 其他渠道需要后端支持或第三方服务
         case NotificationChannelType.EMAIL:
         case NotificationChannelType.SMS:
-        case NotificationChannelType.SLACK:
+        case NotificationChannelType.SLACK: {
           // 这些通常需要通过API发送
           this.eventBus.emit('alert:notification-request', {
             alertId: alert.id,
@@ -775,17 +777,20 @@ export class AlertManager {
             alert: alert,
           });
           return true;
+        }
 
-        case NotificationChannelType.CUSTOM:
+        case NotificationChannelType.CUSTOM: {
           // 触发自定义通知事件，让外部处理
           this.eventBus.emit('alert:custom-notification', {
             alert,
             channel,
           });
           return true;
+        }
 
-        default:
+        default: {
           return false;
+        }
       }
     } catch (error) {
       console.error(`[Pandeye] Failed to send ${channel.type} notification:`, error);
