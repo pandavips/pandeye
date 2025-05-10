@@ -381,7 +381,7 @@ function defineErrorBoundaryV2(pandeye: Pandeye) {
       // 阻止错误继续传播
       return false;
     },
-    render(h: Function) {
+    render(h: any) {
       if (this.error) {
         if (this.fallback) {
           if (typeof this.fallback === 'function') {
@@ -619,9 +619,9 @@ try {
   }
 } catch (e) {
   // 定义空函数，防止报错
-  onMounted = (fn: Function) => {};
-  onUnmounted = (fn: Function) => {};
-  onUpdated = (fn: Function) => {};
+  onMounted = (fn: () => void) => {};
+  onUnmounted = (fn: () => void) => {};
+  onUpdated = (fn: () => void) => {};
 }
 
 /**

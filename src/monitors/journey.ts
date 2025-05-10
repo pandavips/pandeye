@@ -540,7 +540,7 @@ export class JourneyTracker {
   /**
    * 记录转化点
    */
-  private recordConversionPoint(element: HTMLElement): void {
+  private recordConversionPoint(_element: HTMLElement): void {
     if (!this.currentJourney) return;
 
     this.currentJourney.metrics.conversionPoints++;
@@ -591,7 +591,7 @@ export class JourneyTracker {
     // 拦截XMLHttpRequest
     const originalXHROpen = XMLHttpRequest.prototype.open;
     const originalXHRSend = XMLHttpRequest.prototype.send;
-    const tracker = this;
+    const self = this;
 
     XMLHttpRequest.prototype.open = function (...args) {
       const method = args[0];
@@ -610,7 +610,7 @@ export class JourneyTracker {
     XMLHttpRequest.prototype.send = function (body) {
       if (this._pandeyeTracker) {
         // 记录请求启动
-        tracker.recordAction({
+        self.recordAction({
           type: UserActionType.API_CALL,
           metadata: {
             method: this._pandeyeTracker.method,
@@ -631,7 +631,7 @@ export class JourneyTracker {
         // 监听加载完成
         this.addEventListener('load', function () {
           const duration = Date.now() - this._pandeyeTracker.startTime;
-          tracker.recordAction({
+          self.recordAction({
             type: UserActionType.API_CALL,
             metadata: {
               method: this._pandeyeTracker.method,
@@ -647,7 +647,7 @@ export class JourneyTracker {
         // 监听错误
         this.addEventListener('error', function () {
           const duration = Date.now() - this._pandeyeTracker.startTime;
-          tracker.recordAction({
+          self.recordAction({
             type: UserActionType.API_CALL,
             metadata: {
               method: this._pandeyeTracker.method,
@@ -661,7 +661,7 @@ export class JourneyTracker {
         });
       }
 
-      return originalXHRSend.apply(this, arguments);
+      return originalXHRSend.apply(this, [...arguments]);
     };
 
     // 拦截Fetch API
@@ -672,7 +672,7 @@ export class JourneyTracker {
         typeof input === 'string' ? input : input instanceof Request ? input.url : 'unknown';
       const method = init?.method || (input instanceof Request ? input.method : 'GET');
 
-      tracker.recordAction({
+      self.recordAction({
         type: UserActionType.API_CALL,
         metadata: {
           method,
@@ -686,7 +686,7 @@ export class JourneyTracker {
         .then(response => {
           const duration = Date.now() - startTime;
 
-          tracker.recordAction({
+          self.recordAction({
             type: UserActionType.API_CALL,
             metadata: {
               method,
@@ -703,7 +703,7 @@ export class JourneyTracker {
         .catch(error => {
           const duration = Date.now() - startTime;
 
-          tracker.recordAction({
+          self.recordAction({
             type: UserActionType.API_CALL,
             metadata: {
               method,

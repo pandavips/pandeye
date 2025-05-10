@@ -363,13 +363,14 @@ export class AlertManager {
 
       // 根据条件类型评估
       switch (condition.type) {
-        case ConditionType.THRESHOLD: {
-          const isTriggered = this.evaluateThresholdCondition(condition, metricData);
-          if (!isTriggered) {
-            result.triggered = false;
+        case ConditionType.THRESHOLD: 
+          {
+            const isTriggered = this.evaluateThresholdCondition(condition, metricData);
+            if (!isTriggered) {
+              result.triggered = false;
+            }
           }
           break;
-        }
 
         case ConditionType.ANOMALY: {
           const anomalyResult = this.evaluateAnomalyCondition(condition, metricData);
