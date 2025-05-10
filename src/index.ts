@@ -639,6 +639,41 @@ export class Pandeye {
   public getConfig(): PandeyeOptions {
     return { ...this.options };
   }
+
+  /**
+   * 主动上报自定义事件数据
+   * @param name - 自定义事件名称
+   * @param data - 事件数据
+   * @public
+   */
+  public reportCustom(name: string, data: any): void {
+    if (!this.isRunning) {
+      console.warn('[Pandeye] Monitoring is not running, custom event not reported');
+      return;
+    }
+
+    if (!name) {
+      console.error('[Pandeye] Event name is required for custom reporting');
+      return;
+    }
+
+    const currentTime = now();
+    const sessionId = getSessionId();
+
+    this.reporter.report({
+      appId: this.options.appId,
+      env: this.options.env,
+      timestamp: currentTime,
+      type: EVENT_TYPES.REPORT.CUSTOM,
+      data: {
+        event: name,
+        ...data,
+      },
+      sdkVersion: VERSION,
+      sessionId,
+      device: this.deviceInfo,
+    });
+  }
 }
 
 // 导出类型定义

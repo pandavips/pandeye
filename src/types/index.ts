@@ -168,6 +168,12 @@ export interface ErrorInfo {
 
   /** 额外的错误信息 */
   extra?: Record<string, unknown>;
+
+  /** 错误上下文 */
+  context?: string;
+
+  /** 用户ID */
+  userId?: string;
 }
 
 // 行为监控相关类型

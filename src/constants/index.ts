@@ -134,6 +134,11 @@ export const EVENT_TYPES = {
      * 控制台日志上报
      */
     CONSOLE: 'console',
+
+    /**
+     * 自定义事件上报
+     */
+    CUSTOM: 'custom',
   },
 
   /**
