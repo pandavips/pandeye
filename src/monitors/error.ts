@@ -239,7 +239,7 @@ export class ErrorMonitor {
     const target = event.target || event.currentTarget;
 
     if (target instanceof HTMLElement || target instanceof Element) {
-      this.handleResourceError(event, target);
+      this.handleResourceError(target);
     } else if (event.error) {
       // JavaScript运行时错误
       this.captureJsError(event);
@@ -263,11 +263,10 @@ export class ErrorMonitor {
 
   /**
    * 处理资源加载错误
-   * @param event - 错误事件
    * @param target - 发生错误的目标元素
    * @private
    */
-  private handleResourceError(event: ErrorEvent, target: Element): void {
+  private handleResourceError(target: Element): void {
     // 确定资源URL
     let resourceUrl = '';
     const tagName = target.tagName.toLowerCase();

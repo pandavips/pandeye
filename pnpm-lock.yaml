@@ -26,6 +26,9 @@ importers:
       '@types/jest':
         specifier: ^29.5.5
         version: 29.5.14
+      '@types/node':
+        specifier: ^22.15.17
+        version: 22.15.17
       '@types/testing-library__jest-dom':
         specifier: ^6.0.0
         version: 6.0.0

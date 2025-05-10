@@ -404,3 +404,13 @@ export const SESSION = {
  * SDK版本
  */
 export const SDK_VERSION = '0.1.0';
+
+/**
+ * 自定义事件常量
+ */
+export const CUSTOM_EVENTS = {
+  /**
+   * 路由变更事件
+   */
+  ROUTE_CHANGE: 'pandeye_route_change',
+};

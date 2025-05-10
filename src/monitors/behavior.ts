@@ -17,9 +17,9 @@
  * @version 0.1.0
  */
 
-import { BehaviorType, BehaviorInfo, CustomEventData } from '../types';
+import { CUSTOM_EVENTS, EVENT_TYPES, LIMITS } from '../constants';
+import { BehaviorInfo, BehaviorType, CustomEventData } from '../types';
 import { generateUniqueId, now, throttle } from '../utils/common';
-import { LIMITS, EVENT_TYPES, CUSTOM_EVENTS } from '../constants';
 
 /**
  * 用户行为监控类
@@ -27,7 +27,7 @@ import { LIMITS, EVENT_TYPES, CUSTOM_EVENTS } from '../constants';
  */
 export class BehaviorMonitor {
   private behaviors: BehaviorInfo[] = [];
-  private maxBehaviors: number = LIMITS.MAX_BEHAVIORS;
+  private maxBehaviors: number = LIMITS.MAX_BEHAVIOR_RECORDS;
   private isMonitoring: boolean = false;
   private pageViewStartTime: number = now();
 
