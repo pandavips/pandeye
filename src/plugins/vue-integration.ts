@@ -3,17 +3,53 @@
  * 支持Vue 2和Vue 3，提供Vue插件、组件和Composition API支持
  */
 
-import {
-  App,
-  ComponentPublicInstance,
-  createApp,
-  defineComponent,
-  getCurrentInstance,
-  h,
-  inject,
-  Plugin,
-  reactive,
-} from 'vue';
+// 为Window对象添加路由器属性类型声明
+declare global {
+  interface Window {
+    $router?: any;
+    router?: any;
+    ['web-vitals']?: any;
+  }
+}
+
+// 声明Vue相关类型
+type App = any;
+type ComponentPublicInstance = any;
+type Plugin = any;
+
+// 兼容Vue 2和Vue 3的导入方式
+// 如果直接导入Vue失败，我们将在运行时动态导入
+let createApp: any;
+let defineComponent: any;
+let h: any;
+let inject: any;
+let reactive: any;
+
+// Vue 2组件实例类型
+interface Vue2Instance {
+  $options?: any;
+  $props?: any;
+  $route?: any;
+  $slots?: any;
+  $vnode?: any;
+  $pandeyeData?: any;
+  [key: string]: any;
+}
+
+// 我们会使用动态导入方式而不是静态导入
+// 因为可能会出现找不到模块的问题
+try {
+  // 尝试动态导入Vue，先从全局变量获取，再尝试导入
+  const globalVue = (window as any).Vue;
+  const vueModule = globalVue || eval('require("vue")');
+  createApp = vueModule.createApp;
+  defineComponent = vueModule.defineComponent;
+  h = vueModule.h;
+  inject = vueModule.inject;
+  reactive = vueModule.reactive;
+} catch (e) {
+  console.warn('[PandEye] Failed to import Vue. Some features may not work properly.');
+}
 import { Pandeye } from '../index';
 import { PandeyeOptions } from '../types';
 
@@ -49,10 +85,11 @@ interface PandeyeState {
 export const PandeyePlugin: Plugin = {
   install(app: App | Vue2, options: PandeyeOptions) {
     const pandeye = Pandeye.getInstance(options);
-    const pandeyeState = reactive<PandeyeState>({
+    // 移除泛型类型参数，避免类型错误
+    const pandeyeState = reactive({
       isEnabled: true,
       version: pandeye.getVersion(),
-    });
+    }) as PandeyeState;
 
     // 全局错误处理
     const errorHandler = (err: Error, vm: ComponentPublicInstance | any, info: string) => {
@@ -277,6 +314,15 @@ function getComponentInfo(vm: any): {
  * Vue 3错误边界组件
  */
 function defineErrorBoundaryV3(pandeye: Pandeye) {
+  // 定义Vue3组件的类型
+  type Vue3ErrorBoundaryInstance = {
+    $slots: any;
+    error: Error | null;
+    errorInfo: string | null;
+    fallback: any;
+    resetError: () => void;
+  };
+
   return defineComponent({
     name: 'PandeyeErrorBoundary',
     props: {
@@ -285,19 +331,19 @@ function defineErrorBoundaryV3(pandeye: Pandeye) {
         default: null,
       },
     },
-    data() {
+    data(): { error: Error | null; errorInfo: string | null } {
       return {
         error: null,
         errorInfo: null,
       };
     },
     methods: {
-      resetError() {
+      resetError(this: Vue3ErrorBoundaryInstance): void {
         this.error = null;
         this.errorInfo = null;
       },
     },
-    errorCaptured(err: Error, vm: ComponentPublicInstance, info: string) {
+    errorCaptured(this: Vue3ErrorBoundaryInstance, err: Error, vm: any, info: string): boolean {
       this.error = err;
       this.errorInfo = info;
 
@@ -311,7 +357,7 @@ function defineErrorBoundaryV3(pandeye: Pandeye) {
       // 阻止错误继续传播
       return false;
     },
-    render() {
+    render(this: Vue3ErrorBoundaryInstance): any {
       if (this.error) {
         if (this.fallback) {
           if (typeof this.fallback === 'function') {
@@ -347,6 +393,14 @@ function defineErrorBoundaryV3(pandeye: Pandeye) {
  * Vue 2错误边界组件
  */
 function defineErrorBoundaryV2(pandeye: Pandeye) {
+  // 为Vue 2组件定义具体类型
+  type Vue2ErrorBoundaryInstance = Vue2Instance & {
+    error: Error | null;
+    errorInfo: string | null;
+    fallback: any;
+    resetError: () => void;
+  };
+
   return {
     name: 'PandeyeErrorBoundary',
     props: {
@@ -357,17 +411,17 @@ function defineErrorBoundaryV2(pandeye: Pandeye) {
     },
     data() {
       return {
-        error: null,
-        errorInfo: null,
+        error: null as Error | null,
+        errorInfo: null as string | null,
       };
     },
     methods: {
-      resetError() {
+      resetError(this: Vue2ErrorBoundaryInstance) {
         this.error = null;
         this.errorInfo = null;
       },
     },
-    errorCaptured(err: Error, vm: any, info: string) {
+    errorCaptured(this: Vue2ErrorBoundaryInstance, err: Error, vm: any, info: string): boolean {
       this.error = err;
       this.errorInfo = info;
 
@@ -381,7 +435,7 @@ function defineErrorBoundaryV2(pandeye: Pandeye) {
       // 阻止错误继续传播
       return false;
     },
-    render(h: any) {
+    render(this: Vue2ErrorBoundaryInstance, h: any): any {
       if (this.error) {
         if (this.fallback) {
           if (typeof this.fallback === 'function') {
@@ -429,9 +483,9 @@ function defineTrackerV3(pandeye: Pandeye) {
         default: () => ({}),
       },
     },
-    setup(props, { slots }) {
+    setup(props: { name: string; attributes: Record<string, any> }, { slots }: { slots: any }) {
       const startTime = performance.now();
-      const instance = getCurrentInstance();
+      // 不需要getCurrentInstance
 
       // 挂载完成后记录
       onMounted(() => {
@@ -473,6 +527,13 @@ function defineTrackerV3(pandeye: Pandeye) {
  * Vue 2性能跟踪组件
  */
 function defineTrackerV2(pandeye: Pandeye) {
+  // 为Vue 2 Tracker组件定义具体类型
+  type Vue2TrackerInstance = Vue2Instance & {
+    name: string;
+    attributes: Record<string, any>;
+    startTime: number;
+  };
+
   return {
     name: 'PandeyeTracker',
     props: {
@@ -490,7 +551,7 @@ function defineTrackerV2(pandeye: Pandeye) {
         startTime: performance.now(),
       };
     },
-    mounted() {
+    mounted(this: Vue2TrackerInstance) {
       const mountTime = performance.now() - this.startTime;
 
       pandeye.reportCustom('vue.tracker.mount', {
@@ -499,14 +560,14 @@ function defineTrackerV2(pandeye: Pandeye) {
         ...this.attributes,
       });
     },
-    updated() {
+    updated(this: Vue2TrackerInstance) {
       pandeye.reportCustom('vue.tracker.update', {
         name: this.name,
         updateTime: performance.now(),
         ...this.attributes,
       });
     },
-    beforeDestroy() {
+    beforeDestroy(this: Vue2TrackerInstance) {
       const totalLifetime = performance.now() - this.startTime;
 
       pandeye.reportCustom('vue.tracker.unmount', {
@@ -515,7 +576,7 @@ function defineTrackerV2(pandeye: Pandeye) {
         ...this.attributes,
       });
     },
-    render() {
+    render(this: Vue2TrackerInstance): any {
       return this.$slots.default;
     },
   };
@@ -606,12 +667,14 @@ let onUpdated: any;
 try {
   // 动态导入Vue Composition API
   if (isVue3) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const vueModule = require('vue');
     onMounted = vueModule.onMounted;
     onUnmounted = vueModule.onUnmounted;
     onUpdated = vueModule.onUpdated;
   } else {
     // Vue 2 + @vue/composition-api
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const compositionApi = require('@vue/composition-api');
     onMounted = compositionApi.onMounted;
     onUnmounted = compositionApi.onUnmounted;
@@ -619,16 +682,22 @@ try {
   }
 } catch (e) {
   // 定义空函数，防止报错
-  onMounted = (fn: () => void) => {};
-  onUnmounted = (fn: () => void) => {};
-  onUpdated = (fn: () => void) => {};
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onMounted = (_fn: () => void) => {};
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onUnmounted = (_fn: () => void) => {};
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onUpdated = (_fn: () => void) => {};
 }
 
 /**
  * Vue 3 Composition API支持
  */
 export function usePandeye() {
-  const pandeyeContext = inject<{ pandeye: Pandeye; state: PandeyeState }>(PANDEYE_INJECTION_KEY);
+  // 明确地指定inject的返回类型
+  const pandeyeContext = inject(PANDEYE_INJECTION_KEY) as
+    | { pandeye: Pandeye; state: PandeyeState }
+    | undefined;
 
   if (!pandeyeContext) {
     console.warn('[PandEye] usePandeye() must be used within a component using PandEye plugin');

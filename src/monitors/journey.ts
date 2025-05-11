@@ -591,7 +591,7 @@ export class JourneyTracker {
     // 拦截XMLHttpRequest
     const originalXHROpen = XMLHttpRequest.prototype.open;
     const originalXHRSend = XMLHttpRequest.prototype.send;
-    const self = this;
+    const self = this; // eslint-disable-line @typescript-eslint/no-this-alias
 
     XMLHttpRequest.prototype.open = function (...args) {
       const method = args[0];
@@ -610,7 +610,7 @@ export class JourneyTracker {
     XMLHttpRequest.prototype.send = function (body) {
       if (this._pandeyeTracker) {
         // 记录请求启动
-        self.recordAction({
+        this.recordAction({
           type: UserActionType.API_CALL,
           metadata: {
             method: this._pandeyeTracker.method,
@@ -629,9 +629,9 @@ export class JourneyTracker {
         });
 
         // 监听加载完成
-        this.addEventListener('load', function () {
+        this.addEventListener('load', () => {
           const duration = Date.now() - this._pandeyeTracker.startTime;
-          self.recordAction({
+          this.recordAction({
             type: UserActionType.API_CALL,
             metadata: {
               method: this._pandeyeTracker.method,
@@ -645,9 +645,9 @@ export class JourneyTracker {
         });
 
         // 监听错误
-        this.addEventListener('error', function () {
+        this.addEventListener('error', () => {
           const duration = Date.now() - this._pandeyeTracker.startTime;
-          self.recordAction({
+          this.recordAction({
             type: UserActionType.API_CALL,
             metadata: {
               method: this._pandeyeTracker.method,
@@ -661,7 +661,7 @@ export class JourneyTracker {
         });
       }
 
-      return originalXHRSend.apply(this, [...arguments]);
+      return originalXHRSend.apply(this, [body]);
     };
 
     // 拦截Fetch API
