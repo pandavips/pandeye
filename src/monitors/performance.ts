@@ -1,71 +1,17 @@
-import { PerformanceMetrics, ResourceMetric } from '../types';
+import { Monitor } from '@/monitors';
+import { Reporter } from '@/utils/reporter';
 
-export class PerformanceMonitor {
-  private metrics: PerformanceMetrics;
-
-  constructor() {
-    this.metrics = {
-      loadTime: 0,
-      domReadyTime: 0,
-      firstPaintTime: 0,
-      firstMeaningfulPaintTime: 0,
-      resources: []
-    };
+// todo: 需要实现性能监控的具体逻辑
+export class PerformanceMonitor extends Monitor {
+  constructor(reporter: Reporter) {
+    super(reporter);
+    this.isTracking = false;
     this.init();
   }
 
-  private init(): void {
-    this.observeLoad();
-    this.observePaint();
-    this.observeResources();
-  }
-
-  private observeLoad(): void {
-    window.addEventListener('load', () => {
-      const timing = performance.timing;
-      
-      this.metrics.loadTime = timing.loadEventEnd - timing.navigationStart;
-      this.metrics.domReadyTime = timing.domContentLoadedEventEnd - timing.navigationStart;
-    });
-  }
-
-  private observePaint(): void {
-    if (window.PerformanceObserver) {
-      const observer = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
-          if (entry.name === 'first-paint') {
-            this.metrics.firstPaintTime = entry.startTime;
-          } else if (entry.name === 'first-meaningful-paint') {
-            this.metrics.firstMeaningfulPaintTime = entry.startTime;
-          }
-        }
-      });
-
-      observer.observe({ entryTypes: ['paint'] });
-    }
-  }
-
-  private observeResources(): void {
-    if (window.PerformanceObserver) {
-      const observer = new PerformanceObserver((list) => {
-        const entries = list.getEntries();
-        for (const entry of entries) {
-          const resource: ResourceMetric = {
-            name: entry.name,
-            initiatorType: entry.initiatorType,
-            duration: entry.duration,
-            transferSize: (entry as PerformanceResourceTiming).transferSize,
-            startTime: entry.startTime
-          };
-          this.metrics.resources.push(resource);
-        }
-      });
-
-      observer.observe({ entryTypes: ['resource'] });
-    }
-  }
-
-  public getMetrics(): PerformanceMetrics {
-    return this.metrics;
-  }
+  init(): void {}
+  destroy(): void {}
+  start(): void {}
+  stop(): void {}
+  report(): void {}
 }
