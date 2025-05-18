@@ -35,6 +35,12 @@ class Pandeye {
       });
     } catch (error) {
       Original.consoleError('Pandeye 初始化失败:', error);
+      // 降级初始化一个基础的Reporter实例,避免外部调用出现异常阻断重要流程
+      this.reporter = new Reporter({
+        reportUrl: '',
+        appId: 'default',
+        publicKey: '',
+      });
     }
   }
 
