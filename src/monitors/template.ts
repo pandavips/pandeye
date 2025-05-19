@@ -1,10 +1,11 @@
+import { ReporterBaseData } from '@/types';
 import { Reporter } from '@/utils/reporter';
 /**
  * 基类
  */
 export abstract class Monitor {
   // 是否正在监控
-  protected isTracking: boolean = false;
+  protected isTracking = false;
   // 上报器
   protected reporter: Reporter;
 
@@ -22,5 +23,5 @@ export abstract class Monitor {
   // 销毁监控器
   abstract destroy(): void;
   // 上报数据
-  abstract report(data: any): void;
+  abstract report(data: ReporterBaseData): void;
 }

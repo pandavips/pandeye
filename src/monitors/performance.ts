@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { Monitor } from '@/monitors';
 import { Reporter } from '@/utils/reporter';
 

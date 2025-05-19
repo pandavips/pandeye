@@ -5,7 +5,10 @@ export class DataCrypto {
   static ALGORITHM = 'RSA-OAEP'; // 加密算法
   static CHUNK_SIZE = 190; // RSA-2048 的最大加密长度约为 214 字节，留出空间确保安全
 
-  private constructor() {}
+  // 这是一个静态类,禁止new实例化
+  private constructor() {
+    throw new Error('This is a static class and cannot be instantiated.');
+  }
 
   /**
    * 将 Uint8Array 转换为 Base64 字符串
@@ -49,7 +52,7 @@ export class DataCrypto {
    * @param data - 要加密的数据
    * @param publicKey - 公钥
    */
-  static async encrypt(data: string, publicKey: CryptoKey): Promise<any> {
+  static async encrypt(data: string, publicKey: CryptoKey): Promise<string[]> {
     const encoder = new TextEncoder();
     const encodedData = encoder.encode(data);
     const chunks = [];
@@ -74,7 +77,10 @@ export class DataCrypto {
    * @param obj - 要加密的对象
    * @param publicKey - 公钥
    */
-  static async encryptObject(obj: any, publicKey: CryptoKey): Promise<string[]> {
+  static async encryptObject(obj: object, publicKey: CryptoKey): Promise<string[]> {
+    if (typeof obj !== 'object' || obj === null) {
+      throw new Error('Invalid object to encrypt');
+    }
     const jsonString = JSON.stringify(obj);
     return await this.encrypt(jsonString, publicKey);
   }

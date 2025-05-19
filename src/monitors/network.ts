@@ -2,15 +2,19 @@ import { Monitor } from '@/monitors';
 import { Original } from '@/utils';
 import { Reporter } from '@/utils/reporter';
 
+interface NetworkReportData extends NetworkRequestInfo {
+  type: 'xhr' | 'xhr_error' | 'xhr_abort' | 'fetch' | 'fetch_error';
+}
+
 interface NetworkRequestInfo {
   method: string;
   url: string;
-  body?: any;
+  body?: Document | XMLHttpRequestBodyInit | BodyInit | null;
   headers?: Record<string, string>;
   startTime: number;
   status?: number;
   statusText?: string;
-  response?: any;
+  response?: unknown;
   endTime?: number;
   duration?: number;
   error?: Error;
@@ -53,7 +57,7 @@ export class NetworkMonitor extends Monitor {
     this.stop();
   }
 
-  report(data: any): void {
+  override report(data: NetworkReportData): void {
     this.reporter.report({
       type: 'network',
       payload: data,
@@ -61,6 +65,7 @@ export class NetworkMonitor extends Monitor {
   }
 
   private overrideXHR(): void {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     const XHR = this.originalXHR;
 
@@ -74,10 +79,17 @@ export class NetworkMonitor extends Monitor {
 
       // 重写 open 方法
       const originalOpen = xhr.open;
-      xhr.open = function (method: string, url: string) {
+
+      xhr.open = function (
+        method: string,
+        url: string | URL,
+        async = true,
+        username?: string | null | undefined,
+        password?: string | null | undefined
+      ) {
         requestInfo.method = method;
-        requestInfo.url = url;
-        return originalOpen.apply(this, arguments as any);
+        requestInfo.url = url.toString();
+        return originalOpen.apply(this, [method, url, !!async, username, password]);
       };
 
       // 重写 send 方法
@@ -98,7 +110,7 @@ export class NetworkMonitor extends Monitor {
           self.report({
             type: 'xhr',
             ...requestInfo,
-          });
+          } as NetworkReportData);
         });
 
         // 监听错误
@@ -111,7 +123,7 @@ export class NetworkMonitor extends Monitor {
           self.report({
             type: 'xhr_error',
             ...requestInfo,
-          });
+          } as NetworkReportData);
         });
 
         // 监听abort
@@ -123,10 +135,10 @@ export class NetworkMonitor extends Monitor {
           self.report({
             type: 'xhr_abort',
             ...requestInfo,
-          });
+          } as NetworkReportData);
         });
 
-        return originalSend.apply(this, arguments as any);
+        return originalSend.apply(this, body === undefined ? [] : [body]);
       };
 
       return xhr;
@@ -134,6 +146,7 @@ export class NetworkMonitor extends Monitor {
   }
 
   private overrideFetch(): void {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
     window.fetch = async function (input: RequestInfo | URL, init?: RequestInit) {
@@ -168,10 +181,10 @@ export class NetworkMonitor extends Monitor {
         self.report({
           type: 'fetch',
           ...responseData,
-        });
+        } as NetworkReportData);
 
         return response;
-      } catch (error) {
+      } catch (error: unknown) {
         const endTime = Date.now();
         const duration = endTime - startTime;
 
@@ -180,15 +193,15 @@ export class NetworkMonitor extends Monitor {
           ...requestInfo,
           endTime,
           duration,
-          error,
-        });
+          error: error instanceof Error ? error : new Error('Unknown error occurred'),
+        } as NetworkReportData);
 
         throw error;
       }
     } as typeof fetch;
   }
 
-  private async cloneResponse(response: Response): Promise<any> {
+  private async cloneResponse(response: Response): Promise<unknown> {
     try {
       const contentType = response.headers.get('content-type');
       if (contentType?.includes('application/json')) {
@@ -203,10 +216,10 @@ export class NetworkMonitor extends Monitor {
     }
   }
 
-  private parseResponse(type: string, response: any): any {
+  private parseResponse(type: string, response: unknown): unknown {
     try {
-      if (type === 'json') {
-        return typeof response === 'string' ? JSON.parse(response) : response;
+      if (type === 'json' && typeof response === 'string') {
+        return JSON.parse(response);
       }
       return response;
     } catch {

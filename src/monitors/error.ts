@@ -1,4 +1,5 @@
 import { Monitor } from '@/monitors';
+import { ReporterBaseData } from '@/types';
 import { Original } from '@/utils';
 import { Reporter } from '@/utils/reporter';
 
@@ -38,7 +39,7 @@ export class ErrorMonitor extends Monitor {
     this.stop();
   }
 
-  report(data: any): void {
+  report(data: ReporterBaseData): void {
     this.reporter.report({
       type: 'error',
       payload: data,
@@ -51,7 +52,7 @@ export class ErrorMonitor extends Monitor {
       // JavaScript 运行时错误
       this.report({
         type: 'runtime',
-        error: {
+        payload: {
           message: event.message,
           filename: event.filename,
           lineno: event.lineno,
@@ -66,7 +67,7 @@ export class ErrorMonitor extends Monitor {
       if (target && target.tagName) {
         this.report({
           type: 'resource',
-          error: {
+          payload: {
             tagName: target.tagName.toLowerCase(),
             source: this.getResourceUrl(target),
             type: target.getAttribute('type') || '',
@@ -81,7 +82,7 @@ export class ErrorMonitor extends Monitor {
 
   // 处理未捕获的Promise错误
   private handleUnhandledRejection = (event: PromiseRejectionEvent): void => {
-    let reason = event.reason;
+    const reason = event.reason;
     let stack = '';
     let message = '';
 
@@ -94,7 +95,7 @@ export class ErrorMonitor extends Monitor {
 
     this.report({
       type: 'unhandledrejection',
-      error: {
+      payload: {
         message,
         stack,
       },

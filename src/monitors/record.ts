@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 /**
  * web视图录制,基于rrweb
  */

@@ -20,12 +20,12 @@ export class Reporter {
   private readonly publicKey!: string; // RSA公钥（Base64格式）
   private cryptoKey?: CryptoKey; // 缓存已导入的公钥
   private queue: ReporterData[] = []; // 待上报的数据队列
-  private sending: boolean = false; // 是否正在进行数据上报
+  private sending = false; // 是否正在进行数据上报
   private transport!: Transport; // 数据传输的具体实现
   private reportTimes: number[] = []; // 记录最近的上报时间戳
   private readonly maxReportsPerSecond: number = 200; // 每秒最大上报次数,超过则认为异常
   private readonly timeWindow: number = 1000; // 检测时间窗口(毫秒)
-  private isAbnormal: boolean = false; // 是否处于异常状态
+  private isAbnormal = false; // 是否处于异常状态
 
   /**
    * 构造函数
@@ -91,7 +91,8 @@ export class Reporter {
       reportId: this.reportId,
       environment: this.environment,
       timestamp: data.timestamp || Date.now(),
-      ...data,
+      type: data.type,
+      payload: typeof data.payload === 'string' ? data.payload : JSON.stringify(data.payload),
     });
     // localStorage.setItem(CACHE_KEY, JSON.stringify(this.queue));
   }
@@ -138,7 +139,7 @@ export class Reporter {
     }
 
     // 加密payload数据
-    const encryptedChunks = await DataCrypto.encryptObject(data.payload, this.cryptoKey);
+    const encryptedChunks = await DataCrypto.encryptObject(data.payload as object, this.cryptoKey);
 
     const chunkArray = encryptedChunks.map((chunk, index) => ({
       chunk,
@@ -163,8 +164,14 @@ export class Reporter {
   private setupBeforeUnload(): void {
     window.addEventListener('beforeunload', () => {
       if (this.queue.length > 0) {
-        const dataToReport = { events: this.queue };
-        this.transport.sendBeacon(this.reportUrl, dataToReport);
+        this.transport.sendBeacon(this.reportUrl, {
+          appId: this.appId,
+          reportId: this.reportId,
+          environment: this.environment,
+          timestamp: Date.now(),
+          type: 'unload',
+          payload: JSON.stringify(this.queue),
+        });
         this.queue = [];
       }
     });
@@ -191,6 +198,12 @@ export class Reporter {
     this.sending = true;
 
     const batch = this.shiftData();
+
+    if (!batch) {
+      this.sending = false;
+      return;
+    }
+
     try {
       await this.sendWithRetry(batch);
     } catch (error) {
@@ -228,7 +241,7 @@ export class Reporter {
     return false;
   }
 
-  private async sendWithRetry(data: any, retries: number = 0): Promise<void> {
+  private async sendWithRetry(data: ReporterData, retries = 0): Promise<void> {
     if (this.isAbnormal) {
       Original.consoleWarn('当前处于异常状态，停止上报');
       return;
@@ -262,7 +275,7 @@ export class Reporter {
  * 基于Fetch API的数据传输实现
  */
 class FetchTransport implements Transport {
-  async send(url: string, data: any): Promise<void> {
+  async send(url: string, data: ReporterData): Promise<void> {
     const response = await Original.fetch(url, {
       method: 'POST',
       headers: {
@@ -274,8 +287,7 @@ class FetchTransport implements Transport {
       throw new Error(`HTTP错误! 状态码: ${response.status}, 消息: ${await response.text()}`);
     }
   }
-
-  sendBeacon(url: string, data: any): boolean {
+  sendBeacon(url: string, data: ReporterData): boolean {
     try {
       return navigator.sendBeacon(url, JSON.stringify(data));
     } catch (e) {

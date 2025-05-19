@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { Monitor } from '@/monitors';
+import { ReporterBaseData } from '@/types';
 import { Reporter } from '@/utils/reporter';
 
 /**
@@ -19,7 +21,7 @@ export class BehaviorMonitor extends Monitor {
 
   destroy(): void {}
 
-  report(data: any): void {
+  report(data: ReporterBaseData): void {
     this.reporter.report({
       type: 'behavior',
       payload: data,
